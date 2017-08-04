@@ -8,3 +8,7 @@ exports.ready = function(arg0, success, error) {
 exports.showMedia = function(arg0, success, error) {
     exec(success, error, "bocoviewer", "showMedia", [arg0]);
 };
+
+exports.closeViewer = function(arg0, success, error) {
+exec(success, error, "bocoviewer", "closeViewer", [arg0]);
+};
