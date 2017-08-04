@@ -86,9 +86,13 @@
 -(void)showMedia:(CDVInvokedUrlCommand *)command{
     
     self.webview = [[UIWebView alloc] init];
+ 
+    NSDictionary* options = [command.arguments objectAtIndex:0];
     
-    NSString* urlString = [command.arguments objectAtIndex:0];
+    NSString* urlString = options[@"url"];
     
+    NSString* embedded = options[@"embedded"];
+
     self.callbackId = command.callbackId;
     
     NSURL *fileURL = [NSURL URLWithString:urlString];
@@ -98,17 +102,21 @@
     
     player = [AVPlayer playerWithPlayerItem:anItem];
     
+    
     controller = [[AVPlayerViewController alloc] init];
+    if(embedded != nil && [embedded isEqualToString:@"true"]){
+        CGRect rect = CGRectMake([options[@"x"] integerValue], [options[@"y"] integerValue], [options[@"width"] integerValue], [options[@"height"] integerValue]);
+        
+        [controller.view setFrame:rect];
+    }
+    
     controller.player = player;
     controller.allowsPictureInPicturePlayback = YES;
     controller.showsPlaybackControls = YES;
     controller.delegate = self;
-    [self.viewController presentViewController:controller animated:YES completion:^{
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(itemDidFinishPlaying:) name:AVPlayerItemDidPlayToEndTimeNotification object:controller.player.currentItem];
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(itemDidFinishPlaying:) name:AVPlayerItemFailedToPlayToEndTimeNotification object:controller.player.currentItem];
-        
-        
-    }];
+    [self.viewController.view addSubview:controller.view];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(itemDidFinishPlaying:) name:AVPlayerItemDidPlayToEndTimeNotification object:controller.player.currentItem];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(itemDidFinishPlaying:) name:AVPlayerItemFailedToPlayToEndTimeNotification object:controller.player.currentItem];
     [player addObserver:self forKeyPath:@"rate" options:0 context:nil];
     [player seekToTime:kCMTimeZero];
     timer = [NSTimer scheduledTimerWithTimeInterval:1
@@ -123,7 +131,9 @@
 }
 
 
-
+-(void)closeViewer:(CDVInvokedUrlCommand *)command{
+    [controller.view removeFromSuperview];
+}
 
 -(void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context{
     
