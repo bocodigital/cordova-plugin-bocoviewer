@@ -5,18 +5,34 @@
 #import <AVKit/AVKit.h>
 #import "bocoviewer.h"
 #import <WebKit/WebKit.h>
+#import <MediaPlayer/MediaPlayer.h>
 
-@interface bocoviewer () <AVPlayerViewControllerDelegate> {
+@interface bocoviewer () <AVPlayerViewControllerDelegate,AVAudioPlayerDelegate> {
     // Member variables go here.
     AVPlayerViewController *controller;
+    AVAudioPlayer *audioPlayer;
+    UIView* audioPlayerView;
     NSString *address;
     NSString *resourceId;
     NSString *mediaTitle;
     NSObject *timeObserveToken;
     NSTimer *timer;
+    NSTimer *updateTimer;
     AVPlayer *player;
     BOOL isPaused;
-    
+    UIToolbar *toolBar;
+    UIBarButtonItem *pauseButton;
+    UIBarButtonItem *playButton;
+    UIBarButtonItem *flexSpace;
+    UIBarButtonItem *closeButton;
+    UIBarButtonItem *volumeButton;
+    UISlider *slider;
+    UISlider *volumeSlider;
+    UILabel *currentTimeLabel;
+    UILabel *durationTimeLabel;
+    UILabel *mediaTitleLabel;
+    float currentVolume;
+    BOOL isMuted;
     
     
 }
@@ -83,6 +99,296 @@
     return result;
 }
 
+-(void)pauseAudio{
+    NSMutableArray *toolbarItems = [NSMutableArray arrayWithArray:[toolBar items]];
+    
+    if(isPaused){
+        [audioPlayer play];
+        isPaused = NO;
+        pauseButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemPause target:self action:@selector(pauseAudio)];
+        
+        UIColor *grey =[UIColor colorWithRed:227.0 green:227.0 blue:227.0 alpha:1];
+        [pauseButton setTintColor:grey];
+        
+        [toolbarItems replaceObjectAtIndex:0 withObject:pauseButton];
+        toolBar.items = toolbarItems;
+    }else{
+        [audioPlayer pause];
+        isPaused = YES;
+        playButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemPlay target:self action:@selector(pauseAudio)];
+        
+        UIColor *grey =[UIColor colorWithRed:227.0 green:227.0 blue:227.0 alpha:1];
+        [playButton setTintColor:grey];
+        
+        [toolbarItems replaceObjectAtIndex:0 withObject:playButton];
+        toolBar.items = toolbarItems;
+    }
+}
+
+- (void)updateSeekBar{
+    float progress = audioPlayer.currentTime;
+    [slider setValue:progress];
+    NSTimeInterval theTimeInterval = audioPlayer.currentTime;
+    // Get the system calendar
+    NSCalendar *sysCalendar = [NSCalendar currentCalendar];
+    
+    // Create the NSDates
+    NSDate *date1 = [[NSDate alloc] init];
+    NSDate *date2 = [[NSDate alloc] initWithTimeInterval:theTimeInterval sinceDate:date1];
+    // Get conversion to hours, minutes, seconds
+    unsigned int unitFlags = NSCalendarUnitHour | NSCalendarUnitMinute | NSCalendarUnitSecond;
+    NSDateComponents *breakdownInfo = [sysCalendar components:unitFlags fromDate:date1  toDate:date2  options:0];
+    currentTimeLabel.text = [NSString stringWithFormat:@"%02ld:%02ld:%02ld", (long)[breakdownInfo hour], (long)[breakdownInfo minute], (long)[breakdownInfo second]];
+}
+
+-(void) audioPlayerDidFinishPlaying:(AVAudioPlayer *)player successfully:(BOOL)flag{
+    
+    [audioPlayer stop];
+    
+    CGRect newFrame = CGRectMake(0, self.viewController.view.frame.size.height, self.viewController.view.frame.size.width, 40);
+    
+    [UIView animateWithDuration:0.5
+                          delay:0.5
+                        options: UIViewAnimationOptionCurveEaseIn
+                     animations:^{
+                         audioPlayerView.frame = newFrame;
+                     }
+                     completion:^(BOOL finished){
+                         [audioPlayerView removeFromSuperview];
+                     }];
+    
+}
+
+-(void)muteAudio:(id)sender{
+    
+    UIColor *grey =[UIColor colorWithRed:227.0 green:227.0 blue:227.0 alpha:1];
+     NSMutableArray *toolbarItems = [NSMutableArray arrayWithArray:[toolBar items]];
+    
+    if(isMuted){
+        volumeButton = [[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@"Volume"] style:UIBarButtonItemStylePlain target:self action:@selector(muteAudio:)];
+        [volumeButton setTintColor:grey];
+        
+        [toolbarItems replaceObjectAtIndex:10 withObject:volumeButton];
+        toolBar.items = toolbarItems;
+        
+        audioPlayer.volume = currentVolume;
+        isMuted = NO;
+    }else{
+        volumeButton = [[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@"Mute"] style:UIBarButtonItemStylePlain target:self action:@selector(muteAudio:)];
+        [volumeButton setTintColor:grey];
+        
+        [toolbarItems replaceObjectAtIndex:10 withObject:volumeButton];
+        toolBar.items = toolbarItems;
+        
+        currentVolume = audioPlayer.volume;
+        
+        
+        audioPlayer.volume = 0;
+        isMuted = YES;
+    }
+    
+}
+
+-(void)closeAudio:(id)sender{
+    
+    [audioPlayer stop];
+    
+    CGRect newFrame = CGRectMake(0, self.viewController.view.frame.size.height, self.viewController.view.frame.size.width, 40);
+    
+    [UIView animateWithDuration:0.5
+                          delay:0.5
+                        options: UIViewAnimationOptionCurveEaseIn
+                     animations:^{
+                         audioPlayerView.frame = newFrame;
+                     }
+                     completion:^(BOOL finished){
+                         [audioPlayerView removeFromSuperview];
+                     }];
+    
+}
+
+-(void)seekTime:(id)sender {
+    
+    audioPlayer.currentTime = slider.value;
+    
+}
+
+
+// Process remote control events
+- (void) remoteControlReceivedWithEvent:(UIEvent *)event {
+    
+if (event.type == UIEventTypeRemoteControl) {
+        
+        switch (event.subtype) {
+                case UIEventSubtypeRemoteControlTogglePlayPause:
+                [self pauseAudio];
+                break;
+                case UIEventSubtypeRemoteControlPause:
+                [self pauseAudio];
+                break;
+                case UIEventSubtypeRemoteControlStop:
+                [self pauseAudio];
+                break;
+                case UIEventSubtypeRemoteControlPlay:
+                [self pauseAudio];
+                break;
+            default:
+                break;
+        }
+    }
+}
+
+-(void)playAudio:(CDVInvokedUrlCommand *)command{
+    
+    NSDictionary* options = [command.arguments objectAtIndex:0];
+    
+    NSString* urlString = options[@"url"];
+    
+    isMuted = NO;
+    
+    currentTimeLabel = [[UILabel alloc] init];
+    currentTimeLabel.textColor = [UIColor darkGrayColor];
+    
+    durationTimeLabel = [[UILabel alloc] init];
+    durationTimeLabel.textColor = [UIColor darkGrayColor];
+    
+    mediaTitleLabel = [[UILabel alloc] init];
+    mediaTitleLabel.textColor = [UIColor whiteColor];
+    [mediaTitleLabel setPreferredMaxLayoutWidth:80];
+    
+    NSURL *fileURL = [NSURL URLWithString:urlString];
+    
+    audioPlayerView = [[UIView alloc] initWithFrame:CGRectMake(0, self.viewController.view.frame.size.height, self.viewController.view.frame.size.width, 40)];
+    audioPlayerView.layer.backgroundColor = [UIColor blackColor].CGColor;
+    
+    mediaTitle =  [[fileURL absoluteString] lastPathComponent];
+    
+    toolBar = [[UIToolbar alloc] initWithFrame:CGRectMake(0, 5, self.viewController.view.frame.size.width, 30)];
+    [toolBar setBarStyle:UIBarStyleBlackTranslucent];
+    pauseButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemPause target:self action:@selector(pauseAudio)];
+    UIColor *grey =[UIColor colorWithRed:227.0 green:227.0 blue:227.0 alpha:1];
+    [pauseButton setTintColor:grey];
+    pauseButton.width = 10;
+    
+    volumeButton = [[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@"Volume"] style:UIBarButtonItemStylePlain target:self action:@selector(muteAudio:)];
+    
+    [volumeButton setTintColor:grey];
+    
+    closeButton = [[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@"Close"] style:UIBarButtonItemStylePlain target:self action:@selector(closeAudio:)];
+    
+    [closeButton setTintColor:grey];
+    
+    flexSpace = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
+
+    
+    slider = [[UISlider alloc] initWithFrame:CGRectMake(0, 0, 630, 30)];
+    
+    [slider setThumbImage:[[UIImage alloc] init] forState:UIControlStateNormal];
+    
+    [slider addTarget:self
+                  action:@selector(seekTime:)
+     forControlEvents:UIControlEventValueChanged];
+    
+    [slider setTintColor:[UIColor whiteColor]];
+    
+    //volumeSlider = [[UISlider alloc] initWithFrame:CGRectMake(0, 0, 700, 30)];
+    
+    UIBarButtonItem *sliderAsToolbarItem = [[UIBarButtonItem alloc] initWithCustomView:slider];
+    // Set the width of aSlider
+    [sliderAsToolbarItem setWidth:700];
+    
+    UIBarButtonItem *currentTimeToolBarItem = [[UIBarButtonItem alloc] initWithCustomView:currentTimeLabel];
+    currentTimeToolBarItem.width = 200;
+    
+    UIBarButtonItem *durationTimeToolBarItem = [[UIBarButtonItem alloc] initWithCustomView:durationTimeLabel];
+    durationTimeToolBarItem.width = 200;
+    
+    UIBarButtonItem *mediaTitleToolBarItem = [[UIBarButtonItem alloc] initWithCustomView:mediaTitleLabel];
+    mediaTitleToolBarItem.width = 200;
+    
+    mediaTitleLabel.text = mediaTitle;
+    
+    NSMutableArray *toolbarItems = [NSMutableArray arrayWithArray:[toolBar items]];
+    [toolbarItems addObject:pauseButton];
+    [toolbarItems addObject:flexSpace];
+    [toolbarItems addObject:mediaTitleToolBarItem];
+    [toolbarItems addObject:flexSpace];
+    [toolbarItems addObject:currentTimeToolBarItem];
+    [toolbarItems addObject:flexSpace];
+    [toolbarItems addObject:sliderAsToolbarItem];
+    [toolbarItems addObject:flexSpace];
+    [toolbarItems addObject:durationTimeToolBarItem];
+    [toolbarItems addObject:flexSpace];
+    [toolbarItems addObject:volumeButton];
+    [toolbarItems addObject:flexSpace];
+    [toolbarItems addObject:closeButton];
+    toolBar.items = toolbarItems;
+    
+    [audioPlayerView addSubview:toolBar];
+    
+    audioPlayer = [[AVAudioPlayer alloc] initWithContentsOfURL:fileURL error:nil];
+    
+    audioPlayer.delegate = self;
+    
+    
+    [slider setMinimumValue:0.0];
+    [slider setMaximumValue:audioPlayer.duration];
+    
+    NSTimeInterval theTimeInterval = audioPlayer.currentTime;
+    NSTimeInterval theDurationTimeInterval = audioPlayer.duration;
+    // Get the system calendar
+    NSCalendar *sysCalendar = [NSCalendar currentCalendar];
+    
+    // Create the NSDates
+    NSDate *date1 = [[NSDate alloc] init];
+    NSDate *date2 = [[NSDate alloc] initWithTimeInterval:theTimeInterval sinceDate:date1];
+    // Get conversion to hours, minutes, seconds
+    unsigned int unitFlags = NSCalendarUnitHour | NSCalendarUnitMinute | NSCalendarUnitSecond;
+    NSDateComponents *breakdownInfo = [sysCalendar components:unitFlags fromDate:date1  toDate:date2  options:0];
+    currentTimeLabel.text = [NSString stringWithFormat:@"%02ld:%02ld:%02ld", (long)[breakdownInfo hour], (long)[breakdownInfo minute], (long)[breakdownInfo second]];
+    
+    NSDate *ddate1 = [[NSDate alloc] init];
+    NSDate *ddate2 = [[NSDate alloc] initWithTimeInterval:theDurationTimeInterval sinceDate:date1];
+    // Get conversion to hours, minutes, seconds
+    unsigned int unitFlagsD = NSCalendarUnitHour | NSCalendarUnitMinute | NSCalendarUnitSecond;
+    NSDateComponents *breakdownInfoD = [sysCalendar components:unitFlagsD fromDate:ddate1  toDate:ddate2  options:0];
+    durationTimeLabel.text = [NSString stringWithFormat:@"%02ld:%02ld:%02ld", (long)[breakdownInfoD hour], (long)[breakdownInfoD minute], (long)[breakdownInfoD second]];
+    
+    [currentTimeLabel setFont:[UIFont fontWithName:@"Helvetica-Bold" size:10]];
+    [durationTimeLabel setFont:[UIFont fontWithName:@"Helvetica-Bold" size:10]];
+    [mediaTitleLabel setFont:[UIFont fontWithName:@"Helvetica-Bold" size:10]];
+    
+    
+    [audioPlayer play];
+    
+    
+    updateTimer = [NSTimer scheduledTimerWithTimeInterval:0.1 target:self selector:@selector(updateSeekBar) userInfo:nil repeats:YES];
+    
+    [self.viewController.view addSubview:audioPlayerView];
+    
+//    [[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
+//    [self becomeFirstResponder];
+    
+    NSDictionary *info = @{ MPMediaItemPropertyArtist: mediaTitle,
+                            MPMediaItemPropertyAlbumTitle: mediaTitle,
+                            MPMediaItemPropertyTitle: mediaTitle };
+    
+    [MPNowPlayingInfoCenter defaultCenter].nowPlayingInfo = info;
+    
+    CGRect newFrame = CGRectMake(0, self.viewController.view.frame.size.height -40, self.viewController.view.frame.size.width, 40);
+    
+    [UIView animateWithDuration:0.5
+                          delay:0.5
+                        options: UIViewAnimationOptionCurveEaseIn
+                     animations:^{
+                         audioPlayerView.frame = newFrame;
+                     }
+                     completion:^(BOOL finished){
+                         NSLog(@"Done!");
+                     }];
+    
+}
+
 -(void)showMedia:(CDVInvokedUrlCommand *)command{
     
     self.webview = [[UIWebView alloc] init];
@@ -91,11 +397,20 @@
     
     NSString* urlString = options[@"url"];
     
+    if([urlString rangeOfString:@"mp3"].location != NSNotFound){
+
+        [self playAudio:command];
+        return;
+        
+    }
+    
     NSString* embedded = options[@"embedded"];
 
     self.callbackId = command.callbackId;
     
     NSURL *fileURL = [NSURL URLWithString:urlString];
+    
+    
     
     AVAsset *asset = [AVURLAsset URLAssetWithURL:fileURL options:nil];
     AVPlayerItem *anItem = [AVPlayerItem playerItemWithAsset:asset];
