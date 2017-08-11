@@ -11,7 +11,6 @@
     // Member variables go here.
     AVPlayerViewController *controller;
     AVAudioPlayer *audioPlayer;
-    UIView* audioPlayerView;
     NSString *address;
     NSString *resourceId;
     NSString *mediaTitle;
@@ -38,6 +37,7 @@
 }
 @property (nonatomic, copy) NSString* callbackId;
 @property (nonatomic, strong) UIWebView* webview;
+@property (retain) UIView* audioPlayerView;
 
 - (void)ready:(CDVInvokedUrlCommand*)command;
 - (void)showMedia:(CDVInvokedUrlCommand*)command;
@@ -151,10 +151,10 @@
                           delay:0.5
                         options: UIViewAnimationOptionCurveEaseIn
                      animations:^{
-                         audioPlayerView.frame = newFrame;
+                         self.audioPlayerView.frame = newFrame;
                      }
                      completion:^(BOOL finished){
-                         [audioPlayerView removeFromSuperview];
+                         [self.audioPlayerView removeFromSuperview];
                      }];
     
 }
@@ -162,7 +162,7 @@
 -(void)muteAudio:(id)sender{
     
     UIColor *grey =[UIColor colorWithRed:227.0 green:227.0 blue:227.0 alpha:1];
-     NSMutableArray *toolbarItems = [NSMutableArray arrayWithArray:[toolBar items]];
+    NSMutableArray *toolbarItems = [NSMutableArray arrayWithArray:[toolBar items]];
     
     if(isMuted){
         volumeButton = [[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@"Volume"] style:UIBarButtonItemStylePlain target:self action:@selector(muteAudio:)];
@@ -199,10 +199,16 @@
                           delay:0.5
                         options: UIViewAnimationOptionCurveEaseIn
                      animations:^{
-                         audioPlayerView.frame = newFrame;
+                         self.audioPlayerView.frame = newFrame;
                      }
                      completion:^(BOOL finished){
-                         [audioPlayerView removeFromSuperview];
+                         if([self.audioPlayerView isDescendantOfView:self.viewController.view]){
+                             [toolBar removeFromSuperview];
+                             [self.audioPlayerView removeFromSuperview];
+                             self.audioPlayerView = nil;
+                             
+                         }
+                         
                      }];
     
 }
@@ -217,7 +223,7 @@
 // Process remote control events
 - (void) remoteControlReceivedWithEvent:(UIEvent *)event {
     
-if (event.type == UIEventTypeRemoteControl) {
+    if (event.type == UIEventTypeRemoteControl) {
         
         switch (event.subtype) {
                 case UIEventSubtypeRemoteControlTogglePlayPause:
@@ -238,7 +244,35 @@ if (event.type == UIEventTypeRemoteControl) {
     }
 }
 
+-(void)playNewAudio:(CDVInvokedUrlCommand *)command{
+    [audioPlayer stop];
+    
+    CGRect newFrame = CGRectMake(0, self.viewController.view.frame.size.height, self.viewController.view.frame.size.width, 40);
+    
+    [UIView animateWithDuration:0.5
+                          delay:0.5
+                        options: UIViewAnimationOptionCurveEaseIn
+                     animations:^{
+                         self.audioPlayerView.frame = newFrame;
+                     }
+                     completion:^(BOOL finished){
+                         if([self.audioPlayerView isDescendantOfView:self.viewController.view]){
+                             [toolBar removeFromSuperview];
+                             [self.audioPlayerView removeFromSuperview];
+                             self.audioPlayerView = nil;
+                             [self playAudio:command];
+                         }
+                         
+                     }];
+    
+}
+
 -(void)playAudio:(CDVInvokedUrlCommand *)command{
+    
+    if(self.audioPlayerView != nil){
+        [self playNewAudio:command];
+        return;
+    }
     
     NSDictionary* options = [command.arguments objectAtIndex:0];
     
@@ -258,8 +292,9 @@ if (event.type == UIEventTypeRemoteControl) {
     
     NSURL *fileURL = [NSURL URLWithString:urlString];
     
-    audioPlayerView = [[UIView alloc] initWithFrame:CGRectMake(0, self.viewController.view.frame.size.height, self.viewController.view.frame.size.width, 40)];
-    audioPlayerView.layer.backgroundColor = [UIColor blackColor].CGColor;
+    self.audioPlayerView = [[UIView alloc] initWithFrame:CGRectMake(0, self.viewController.view.frame.size.height, self.viewController.view.frame.size.width, 40)];
+    
+    self.audioPlayerView.layer.backgroundColor = [UIColor blackColor].CGColor;
     
     mediaTitle =  [[fileURL absoluteString] lastPathComponent];
     
@@ -279,14 +314,14 @@ if (event.type == UIEventTypeRemoteControl) {
     [closeButton setTintColor:grey];
     
     flexSpace = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
-
+    
     
     slider = [[UISlider alloc] initWithFrame:CGRectMake(0, 0, 630, 30)];
     
     [slider setThumbImage:[[UIImage alloc] init] forState:UIControlStateNormal];
     
     [slider addTarget:self
-                  action:@selector(seekTime:)
+               action:@selector(seekTime:)
      forControlEvents:UIControlEventValueChanged];
     
     [slider setTintColor:[UIColor whiteColor]];
@@ -324,7 +359,8 @@ if (event.type == UIEventTypeRemoteControl) {
     [toolbarItems addObject:closeButton];
     toolBar.items = toolbarItems;
     
-    [audioPlayerView addSubview:toolBar];
+    [self.audioPlayerView addSubview:toolBar];
+    
     
     audioPlayer = [[AVAudioPlayer alloc] initWithContentsOfURL:fileURL error:nil];
     
@@ -364,10 +400,10 @@ if (event.type == UIEventTypeRemoteControl) {
     
     updateTimer = [NSTimer scheduledTimerWithTimeInterval:0.1 target:self selector:@selector(updateSeekBar) userInfo:nil repeats:YES];
     
-    [self.viewController.view addSubview:audioPlayerView];
+    [self.viewController.view addSubview:self.audioPlayerView];
     
-//    [[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
-//    [self becomeFirstResponder];
+    //    [[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
+    //    [self becomeFirstResponder];
     
     NSDictionary *info = @{ MPMediaItemPropertyArtist: mediaTitle,
                             MPMediaItemPropertyAlbumTitle: mediaTitle,
@@ -377,11 +413,12 @@ if (event.type == UIEventTypeRemoteControl) {
     
     CGRect newFrame = CGRectMake(0, self.viewController.view.frame.size.height -40, self.viewController.view.frame.size.width, 40);
     
+    
     [UIView animateWithDuration:0.5
                           delay:0.5
                         options: UIViewAnimationOptionCurveEaseIn
                      animations:^{
-                         audioPlayerView.frame = newFrame;
+                         self.audioPlayerView.frame = newFrame;
                      }
                      completion:^(BOOL finished){
                          NSLog(@"Done!");
@@ -392,20 +429,20 @@ if (event.type == UIEventTypeRemoteControl) {
 -(void)showMedia:(CDVInvokedUrlCommand *)command{
     
     self.webview = [[UIWebView alloc] init];
- 
+    
     NSDictionary* options = [command.arguments objectAtIndex:0];
     
     NSString* urlString = options[@"url"];
     
     if([urlString rangeOfString:@"mp3"].location != NSNotFound){
-
+        
         [self playAudio:command];
         return;
         
     }
     
     NSString* embedded = options[@"embedded"];
-
+    
     self.callbackId = command.callbackId;
     
     NSURL *fileURL = [NSURL URLWithString:urlString];
@@ -438,9 +475,9 @@ if (event.type == UIEventTypeRemoteControl) {
         }];
     }
     
-
     
-
+    
+    
     [player addObserver:self forKeyPath:@"rate" options:0 context:nil];
     [player seekToTime:kCMTimeZero];
     timer = [NSTimer scheduledTimerWithTimeInterval:1
@@ -457,6 +494,10 @@ if (event.type == UIEventTypeRemoteControl) {
 
 -(void)closeViewer:(CDVInvokedUrlCommand *)command{
     [controller.view removeFromSuperview];
+    if(self.audioPlayerView != nil){
+        [audioPlayer stop];
+        [self.audioPlayerView removeFromSuperview];
+    }
 }
 
 -(void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context{
@@ -530,3 +571,5 @@ if (event.type == UIEventTypeRemoteControl) {
 }
 
 @end
+
+
