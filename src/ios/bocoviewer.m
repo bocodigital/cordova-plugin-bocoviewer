@@ -211,7 +211,9 @@
                      }
                      completion:^(BOOL finished){
                          if([self.audioPlayerView isDescendantOfView:self.viewController.view]){
+                             [toolBar removeFromSuperview];
                              [self.audioPlayerView removeFromSuperview];
+                             self.audioPlayerView = nil;
                             [updateTimer invalidate];
                             updateTimer = nil;
                              
