@@ -11,6 +11,7 @@
     // Member variables go here.
     AVPlayerViewController *controller;
     AVAudioPlayer *audioPlayer;
+    AVURLAsset* audioAsset;
     NSString *address;
     NSString *resourceId;
     NSString *mediaTitle;
@@ -129,6 +130,8 @@
     float progress = audioPlayer.currentTime;
     [slider setValue:progress];
     NSTimeInterval theTimeInterval = audioPlayer.currentTime;
+    
+    CMTime currentTime = CMTimeMakeWithSeconds(theTimeInterval, 1000000);
     // Get the system calendar
     NSCalendar *sysCalendar = [NSCalendar currentCalendar];
     
@@ -139,6 +142,8 @@
     unsigned int unitFlags = NSCalendarUnitHour | NSCalendarUnitMinute | NSCalendarUnitSecond;
     NSDateComponents *breakdownInfo = [sysCalendar components:unitFlags fromDate:date1  toDate:date2  options:0];
     currentTimeLabel.text = [NSString stringWithFormat:@"%02ld:%02ld:%02ld", (long)[breakdownInfo hour], (long)[breakdownInfo minute], (long)[breakdownInfo second]];
+
+    [self sendEventWithJSON:@{@"currentTime":[NSNumber numberWithFloat:CMTimeGetSeconds(currentTime)]}];
 }
 
 -(void) audioPlayerDidFinishPlaying:(AVAudioPlayer *)player successfully:(BOOL)flag{
@@ -155,6 +160,9 @@
                      }
                      completion:^(BOOL finished){
                          [self.audioPlayerView removeFromSuperview];
+                         [self sendEventWithJSON:@{@"currentTime":@"complete"}];
+                         [updateTimer invalidate];
+                         updateTimer = nil;
                      }];
     
 }
@@ -203,9 +211,9 @@
                      }
                      completion:^(BOOL finished){
                          if([self.audioPlayerView isDescendantOfView:self.viewController.view]){
-                             [toolBar removeFromSuperview];
                              [self.audioPlayerView removeFromSuperview];
-                             self.audioPlayerView = nil;
+                            [updateTimer invalidate];
+                            updateTimer = nil;
                              
                          }
                          
@@ -395,6 +403,18 @@
     [mediaTitleLabel setFont:[UIFont fontWithName:@"Helvetica-Bold" size:10]];
     
     
+    if (self.callbackId != nil) {
+        NSString * cbid = [self.callbackId copy];
+        self.callbackId = nil;
+        audioAsset = [AVURLAsset URLAssetWithURL:fileURL options:nil];
+        CMTime seekingCM = audioAsset.duration;
+        
+        CDVPluginResult * pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:@{@"event":@"timeEvent",@"duration":[NSNumber numberWithFloat:(CMTimeGetSeconds(seekingCM))] }];
+        
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:cbid];
+    }
+    
+    
     [audioPlayer play];
     
     
@@ -434,6 +454,8 @@
     
     NSString* urlString = options[@"url"];
     
+    self.callbackId = command.callbackId;
+    
     if([urlString rangeOfString:@"mp3"].location != NSNotFound){
         
         [self playAudio:command];
@@ -443,7 +465,7 @@
     
     NSString* embedded = options[@"embedded"];
     
-    self.callbackId = command.callbackId;
+    
     
     NSURL *fileURL = [NSURL URLWithString:urlString];
     
