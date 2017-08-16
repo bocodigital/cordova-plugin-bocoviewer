@@ -3,7 +3,7 @@
 #import <UIKit/UIKit.h>
 #import <AVFoundation/AVFoundation.h>
 #import <AVKit/AVKit.h>
-#import "Bocoviewer.h"
+#import "bocoviewer.h"
 #import <WebKit/WebKit.h>
 #import <MediaPlayer/MediaPlayer.h>
 
@@ -231,11 +231,13 @@
 
 
 // Process remote control events
-- (void) remoteControlReceivedWithEvent:(UIEvent *)event {
+- (void) remoteControlReceivedWithEvent:(NSNotification *) notification {
     
-    if (event.type == UIEventTypeRemoteControl) {
+     UIEvent * receivedEvent = notification.object;
+    
+    if (receivedEvent.type == UIEventTypeRemoteControl) {
         
-        switch (event.subtype) {
+        switch (receivedEvent.subtype) {
                 case UIEventSubtypeRemoteControlTogglePlayPause:
                 [self pauseAudio];
                 break;
@@ -417,7 +419,7 @@
     }
     
     
-    [audioPlayer play];
+    
     
     
     updateTimer = [NSTimer scheduledTimerWithTimeInterval:0.1 target:self selector:@selector(updateSeekBar) userInfo:nil repeats:YES];
@@ -434,6 +436,16 @@
                             MPMediaItemPropertyTitle: mediaTitle };
     
     [MPNowPlayingInfoCenter defaultCenter].nowPlayingInfo = info;
+    
+    MPRemoteCommandCenter *commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
+    [commandCenter.changePlaybackPositionCommand setEnabled:true];
+    [commandCenter.nextTrackCommand setEnabled:false];
+    [commandCenter.previousTrackCommand setEnabled:false];
+    [commandCenter.seekForwardCommand setEnabled:false];
+    [commandCenter.skipForwardCommand setEnabled:false];
+    [commandCenter.skipBackwardCommand setEnabled:false];
+
+    [audioPlayer play];
     
     CGRect newFrame = CGRectMake(0, self.viewController.view.frame.size.height -40, self.viewController.view.frame.size.width, 40);
     
