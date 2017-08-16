@@ -290,6 +290,8 @@
     
     NSString* urlString = options[@"url"];
     
+    NSString* mediaName = options[@"name"];
+    
     isMuted = NO;
     
     currentTimeLabel = [[UILabel alloc] init];
@@ -308,7 +310,7 @@
     
     self.audioPlayerView.layer.backgroundColor = [UIColor blackColor].CGColor;
     
-    mediaTitle =  [[fileURL absoluteString] lastPathComponent];
+    mediaTitle =  mediaName;
     
     toolBar = [[UIToolbar alloc] initWithFrame:CGRectMake(0, 5, self.viewController.view.frame.size.width, 30)];
     [toolBar setBarStyle:UIBarStyleBlackTranslucent];
@@ -429,11 +431,15 @@
    [[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(remoteControlReceivedWithEvent:) name:@"remoteControlsEventNotification" object:nil];
 
-
+    UIImage *albumImage = [UIImage imageNamed:@"Icon"];
+    MPMediaItemArtwork *artwork = [[MPMediaItemArtwork alloc]initWithImage:albumImage];
     
     NSDictionary *info = @{ MPMediaItemPropertyArtist: mediaTitle,
                             MPMediaItemPropertyAlbumTitle: mediaTitle,
-                            MPMediaItemPropertyTitle: mediaTitle };
+                            MPMediaItemPropertyTitle: mediaTitle,
+                            MPMediaItemPropertyArtwork: artwork
+                            };
+    
     
     [MPNowPlayingInfoCenter defaultCenter].nowPlayingInfo = info;
     
