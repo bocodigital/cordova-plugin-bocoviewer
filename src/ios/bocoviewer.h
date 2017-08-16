@@ -1,6 +1,6 @@
 #import <Foundation/Foundation.h>
 #import <Cordova/CDV.h>
 
-@interface Bocoviewer : CDVPlugin 
+@interface bocoviewer : CDVPlugin 
 
 @end

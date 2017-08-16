@@ -7,7 +7,7 @@
 #import <WebKit/WebKit.h>
 #import <MediaPlayer/MediaPlayer.h>
 
-@interface Bocoviewer () <AVPlayerViewControllerDelegate,AVAudioPlayerDelegate> {
+@interface bocoviewer () <AVPlayerViewControllerDelegate,AVAudioPlayerDelegate> {
     // Member variables go here.
     AVPlayerViewController *controller;
     AVAudioPlayer *audioPlayer;

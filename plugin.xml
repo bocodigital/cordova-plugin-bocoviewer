@@ -10,8 +10,8 @@
 				<param name="ios-package" value="bocoviewer"/>
 			</feature>
 		</config-file>
-		<source-file src="src/ios/Bocoviewer.h"/>
-		<source-file src="src/ios/Bocoviewer.m"/>
+		<source-file src="src/ios/bocoviewer.h"/>
+		<source-file src="src/ios/bocoviewer.m"/>
 		<source-file src="src/ios/MainViewController+RemoteEvents.h"/>
 		<source-file src="src/ios/MainViewController+RemoteEvents.m"/>
 	</platform>

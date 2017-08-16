@@ -8,3 +8,5 @@
 - (void) remoteControlReceivedWithEvent: (UIEvent *) receivedEvent {
     [[NSNotificationCenter defaultCenter] postNotificationName:@"remoteControlsEventNotification" object:receivedEvent];
 }
+
+@end
