@@ -3,11 +3,11 @@
 #import <UIKit/UIKit.h>
 #import <AVFoundation/AVFoundation.h>
 #import <AVKit/AVKit.h>
-#import "bocoviewer.h"
+#import "Bocoviewer.h"
 #import <WebKit/WebKit.h>
 #import <MediaPlayer/MediaPlayer.h>
 
-@interface bocoviewer () <AVPlayerViewControllerDelegate,AVAudioPlayerDelegate> {
+@interface Bocoviewer () <AVPlayerViewControllerDelegate,AVAudioPlayerDelegate> {
     // Member variables go here.
     AVPlayerViewController *controller;
     AVAudioPlayer *audioPlayer;
@@ -424,8 +424,10 @@
     
     [self.viewController.view addSubview:self.audioPlayerView];
     
-    //    [[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
-    //    [self becomeFirstResponder];
+   [[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
+   [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(remoteControlReceivedWithEvent:) name:@"remoteControlsEventNotification" object:nil];
+
+
     
     NSDictionary *info = @{ MPMediaItemPropertyArtist: mediaTitle,
                             MPMediaItemPropertyAlbumTitle: mediaTitle,
