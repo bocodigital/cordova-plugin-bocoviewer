@@ -538,6 +538,7 @@
 
 -(void)closeViewer:(CDVInvokedUrlCommand *)command{
     [controller.view removeFromSuperview];
+    
     if(self.audioPlayerView != nil){
         [audioPlayer stop];
         [self.audioPlayerView removeFromSuperview];
@@ -606,6 +607,7 @@
     
     
     if(controller.player.rate == 0 && (controller.isBeingDismissed || controller.nextResponder == nil)){
+        [player removeObserver:self forKeyPath:@"rate"];
         [timer invalidate];
         timer = nil;
     }
