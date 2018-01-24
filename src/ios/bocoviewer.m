@@ -142,7 +142,7 @@
     unsigned int unitFlags = NSCalendarUnitHour | NSCalendarUnitMinute | NSCalendarUnitSecond;
     NSDateComponents *breakdownInfo = [sysCalendar components:unitFlags fromDate:date1  toDate:date2  options:0];
     currentTimeLabel.text = [NSString stringWithFormat:@"%02ld:%02ld:%02ld", (long)[breakdownInfo hour], (long)[breakdownInfo minute], (long)[breakdownInfo second]];
-
+    
     [self sendEventWithJSON:@{@"currentTime":[NSNumber numberWithFloat:CMTimeGetSeconds(currentTime)]}];
 }
 
@@ -214,8 +214,8 @@
                              [toolBar removeFromSuperview];
                              [self.audioPlayerView removeFromSuperview];
                              self.audioPlayerView = nil;
-                            [updateTimer invalidate];
-                            updateTimer = nil;
+                             [updateTimer invalidate];
+                             updateTimer = nil;
                              
                          }
                          
@@ -233,21 +233,21 @@
 // Process remote control events
 - (void) remoteControlReceivedWithEvent:(NSNotification *) notification {
     
-     UIEvent * receivedEvent = notification.object;
+    UIEvent * receivedEvent = notification.object;
     
     if (receivedEvent.type == UIEventTypeRemoteControl) {
         
         switch (receivedEvent.subtype) {
-                case UIEventSubtypeRemoteControlTogglePlayPause:
+            case UIEventSubtypeRemoteControlTogglePlayPause:
                 [self pauseAudio];
                 break;
-                case UIEventSubtypeRemoteControlPause:
+            case UIEventSubtypeRemoteControlPause:
                 [self pauseAudio];
                 break;
-                case UIEventSubtypeRemoteControlStop:
+            case UIEventSubtypeRemoteControlStop:
                 [self pauseAudio];
                 break;
-                case UIEventSubtypeRemoteControlPlay:
+            case UIEventSubtypeRemoteControlPlay:
                 [self pauseAudio];
                 break;
             default:
@@ -428,9 +428,9 @@
     
     [self.viewController.view addSubview:self.audioPlayerView];
     
-   [[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
-   [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(remoteControlReceivedWithEvent:) name:@"remoteControlsEventNotification" object:nil];
-
+    [[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(remoteControlReceivedWithEvent:) name:@"remoteControlsEventNotification" object:nil];
+    
     UIImage *albumImage = [UIImage imageNamed:@"Icon"];
     MPMediaItemArtwork *artwork = [[MPMediaItemArtwork alloc]initWithImage:albumImage];
     
@@ -450,7 +450,7 @@
     [commandCenter.seekForwardCommand setEnabled:false];
     [commandCenter.skipForwardCommand setEnabled:false];
     [commandCenter.skipBackwardCommand setEnabled:false];
-
+    
     [audioPlayer play];
     
     CGRect newFrame = CGRectMake(0, self.viewController.view.frame.size.height -40, self.viewController.view.frame.size.width, 40);
@@ -520,10 +520,19 @@
     }
     
     
-    
+    if(options[@"seek"]){
+        Float64 seconds = [options[@"seek"] floatValue];
+        CMTime targetTime = CMTimeMakeWithSeconds(seconds, NSEC_PER_SEC);
+        [player seekToTime:targetTime
+           toleranceBefore:kCMTimePositiveInfinity toleranceAfter:kCMTimeZero];
+        
+    }else{
+        [player seekToTime:kCMTimeZero];
+    }
     
     [player addObserver:self forKeyPath:@"rate" options:0 context:nil];
-    [player seekToTime:kCMTimeZero];
+    
+    
     timer = [NSTimer scheduledTimerWithTimeInterval:1
                                              target:self
                                            selector:@selector(addBoundryTimeObserver)
@@ -617,5 +626,3 @@
 }
 
 @end
-
-
