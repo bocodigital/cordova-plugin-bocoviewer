@@ -33,12 +33,13 @@
     UILabel *mediaTitleLabel;
     float currentVolume;
     BOOL isMuted;
+    NSString* completed;
     
     
 }
-@property (nonatomic, copy) NSString* callbackId;
-@property (nonatomic, strong) UIWebView* webview;
-@property (retain) UIView* audioPlayerView;
+@property (nonatomic, weak) NSString* callbackId;
+@property (nonatomic, weak) UIWebView* webview;
+@property (nonatomic, weak) UIView* audioPlayerView;
 
 - (void)ready:(CDVInvokedUrlCommand*)command;
 - (void)showMedia:(CDVInvokedUrlCommand*)command;
@@ -73,9 +74,13 @@
     
 }
 
+
 -(void)itemDidFinishPlaying:(NSNotification *) notification {
     // Will be called when AVPlayer finishes playing playerItem
-    [self sendEventWithJSON:@{@"currentTime":@"complete"}];
+    CMTime current = controller.player.currentItem.currentTime;
+    CMTime duration = controller.player.currentItem.duration;
+    
+    [self sendEventWithJSON:@{@"currentTime":[NSNumber numberWithFloat:(CMTimeGetSeconds(current))],@"duration":[NSNumber numberWithFloat:(CMTimeGetSeconds(duration))], @"completed": completed}];
     [timer invalidate];
     timer = nil;
 }
@@ -519,6 +524,11 @@
         }];
     }
     
+    if(options[@"completed"]){
+        completed = options[@"completed"];
+    }else{
+        completed = @"false";
+    }
     
     if(options[@"seek"]){
         Float64 seconds = [options[@"seek"] floatValue];
@@ -546,7 +556,12 @@
 
 
 -(void)closeViewer:(CDVInvokedUrlCommand *)command{
+    CMTime current = controller.player.currentItem.currentTime;
+    CMTime duration = controller.player.currentItem.duration;
+    
     [controller.view removeFromSuperview];
+    
+    [self sendEventWithJSON:@{@"currentTime":[NSNumber numberWithFloat:(CMTimeGetSeconds(current))],@"duration":[NSNumber numberWithFloat:(CMTimeGetSeconds(duration))], @"completed":completed}];
     
     if(self.audioPlayerView != nil){
         [audioPlayer stop];
@@ -610,19 +625,33 @@
     if (self.callbackId != nil) {
         NSString * cbid = [self.callbackId copy];
         self.callbackId = nil;
-        CDVPluginResult * pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:@{@"event":@"timeEvent",@"duration":[NSNumber numberWithFloat:(CMTimeGetSeconds(duration))] }];
-        [self.commandDelegate sendPluginResult:pluginResult callbackId:cbid];
+        [self.commandDelegate runInBackground:^{
+            CDVPluginResult * pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:@{@"event":@"timeEvent",@"duration":[NSNumber numberWithFloat:(CMTimeGetSeconds(duration))] }];
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:cbid];
+        }];
     }
     
     
     if(controller.player.rate == 0 && (controller.isBeingDismissed || controller.nextResponder == nil)){
         [player removeObserver:self forKeyPath:@"rate"];
+        [[NSNotificationCenter defaultCenter] removeObserver:self name:AVPlayerItemDidPlayToEndTimeNotification object:controller.player.currentItem];
+        [[NSNotificationCenter defaultCenter] removeObserver:self name:AVPlayerItemFailedToPlayToEndTimeNotification object:controller.player.currentItem];
+        player  = nil;
+        controller = nil;
+        _webview = nil;
+        audioPlayer = nil;
+        
+        [controller.view removeFromSuperview];
+        
         [timer invalidate];
         timer = nil;
+        
+        [self sendEventWithJSON:@{@"currentTime":[NSNumber numberWithFloat:(CMTimeGetSeconds(current))],@"duration":[NSNumber numberWithFloat:(CMTimeGetSeconds(duration))], @"completed": completed}];
+        
     }
     
-    [self sendEventWithJSON:@{@"currentTime":[NSNumber numberWithFloat:(CMTimeGetSeconds(current))]}];
-    //NSLog(@"seconds = %f", CMTimeGetSeconds(current));
+    
+    
 }
 
 @end
