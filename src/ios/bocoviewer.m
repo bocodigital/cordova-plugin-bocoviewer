@@ -37,9 +37,9 @@
     
     
 }
-@property (nonatomic, weak) NSString* callbackId;
-@property (nonatomic, weak) UIWebView* webview;
-@property (nonatomic, weak) UIView* audioPlayerView;
+@property (nonatomic, retain) NSString* callbackId;
+@property (nonatomic, retain) UIWebView* webview;
+@property (nonatomic, retain) UIView* audioPlayerView;
 
 - (void)ready:(CDVInvokedUrlCommand*)command;
 - (void)showMedia:(CDVInvokedUrlCommand*)command;
