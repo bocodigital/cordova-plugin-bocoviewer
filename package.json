@@ -1,0 +1,23 @@
+{
+  "name": "cordova-plugin-bocoviewer",
+  "version": "1.0.0",
+  "description": "Boco Digital Custom Video and Mp3 Viewer",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bocodigital/cordova-plugin-bocoviewer.git"
+  },
+  "keywords": [
+    "bocoviewer",
+    "ios"
+  ],
+  "author": "Bruce Hubbard",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/bocodigital/cordova-plugin-bocoviewer/issues"
+  },
+  "homepage": "https://github.com/bocodigital/cordova-plugin-bocoviewer#readme"
+}
