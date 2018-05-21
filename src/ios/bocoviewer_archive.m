@@ -136,6 +136,7 @@
     [slider setValue:progress];
     NSTimeInterval theTimeInterval = audioPlayer.currentTime;
     
+    CMTime currentTime = CMTimeMakeWithSeconds(theTimeInterval, 1000000);
     // Get the system calendar
     NSCalendar *sysCalendar = [NSCalendar currentCalendar];
     
@@ -146,9 +147,8 @@
     unsigned int unitFlags = NSCalendarUnitHour | NSCalendarUnitMinute | NSCalendarUnitSecond;
     NSDateComponents *breakdownInfo = [sysCalendar components:unitFlags fromDate:date1  toDate:date2  options:0];
     currentTimeLabel.text = [NSString stringWithFormat:@"%02ld:%02ld:%02ld", (long)[breakdownInfo hour], (long)[breakdownInfo minute], (long)[breakdownInfo second]];
-
     
-    
+    [self sendEventWithJSON:@{@"currentTime":[NSNumber numberWithFloat:CMTimeGetSeconds(currentTime)]}];
 }
 
 -(void) audioPlayerDidFinishPlaying:(AVAudioPlayer *)player successfully:(BOOL)flag{
@@ -204,18 +204,9 @@
 
 -(void)closeAudio:(id)sender{
     
-    CMTime seekingCM = audioAsset.duration;
-    CMTime current = CMTimeMakeWithSeconds(audioPlayer.currentTime, 1000000);
-    NSNumber *newCurrentTime = [NSNumber numberWithFloat:(CMTimeGetSeconds(current))];
-    NSNumber *duration = [NSNumber numberWithFloat:(CMTimeGetSeconds(seekingCM))];
-    
-    [self sendEventWithJSON:@{@"currentTime":newCurrentTime,@"duration":[NSNumber numberWithFloat:(CMTimeGetSeconds(seekingCM))], @"completed":completed}];
-    
     [audioPlayer stop];
     
     CGRect newFrame = CGRectMake(0, self.viewController.view.frame.size.height, self.viewController.view.frame.size.width, 40);
-    
-
     
     [UIView animateWithDuration:0.5
                           delay:0.5
@@ -307,7 +298,6 @@
     NSString* mediaName = options[@"name"];
     
     isMuted = NO;
-    
     
     currentTimeLabel = [[UILabel alloc] init];
     currentTimeLabel.textColor = [UIColor darkGrayColor];
@@ -422,36 +412,21 @@
     [currentTimeLabel setFont:[UIFont fontWithName:@"Helvetica-Bold" size:10]];
     [durationTimeLabel setFont:[UIFont fontWithName:@"Helvetica-Bold" size:10]];
     [mediaTitleLabel setFont:[UIFont fontWithName:@"Helvetica-Bold" size:10]];
-   
-    if(options[@"completed"]){
-        completed = options[@"completed"];
-    }else{
-        completed = @"false";
-    }
     
-    if(options[@"seek"]){
-        Float64 seconds = [options[@"seek"] floatValue];
-        slider.value = seconds;
-        [self seekTime:self];
-        
-    }else{
-        slider.value = 0;
-    }
     
     if (self.callbackId != nil) {
         NSString * cbid = [self.callbackId copy];
         self.callbackId = nil;
         audioAsset = [AVURLAsset URLAssetWithURL:fileURL options:nil];
-//        CMTime seekingCM = audioAsset.duration;
-//        CMTime current = CMTimeMakeWithSeconds(audioPlayer.currentTime, 1000000);
-//
-//        CDVPluginResult * pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:@{@"currentTime":[NSNumber numberWithFloat:CMTimeGetSeconds(current)],@"duration":[NSNumber numberWithFloat:(CMTimeGetSeconds(seekingCM))], @"completed":completed }];
-//
-//        [self.commandDelegate sendPluginResult:pluginResult callbackId:cbid];
+        CMTime seekingCM = audioAsset.duration;
+        
+        CDVPluginResult * pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:@{@"event":@"timeEvent",@"duration":[NSNumber numberWithFloat:(CMTimeGetSeconds(seekingCM))] }];
+        
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:cbid];
     }
     
     
-
+    
     
     
     updateTimer = [NSTimer scheduledTimerWithTimeInterval:0.1 target:self selector:@selector(updateSeekBar) userInfo:nil repeats:YES];
@@ -680,4 +655,3 @@
 }
 
 @end
-
