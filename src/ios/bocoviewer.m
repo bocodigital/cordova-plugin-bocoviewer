@@ -11,6 +11,7 @@
     // Member variables go here.
     AVPlayerViewController *controller;
     AVAudioPlayer *audioPlayer;
+    AVAsset *asset;
     AVURLAsset* audioAsset;
     NSString *address;
     NSString *resourceId;
@@ -65,6 +66,7 @@
 
 - (BOOL)sendEventWithJSON:(id)JSON
 {
+    NSLog(@"%@", JSON);
     if ([JSON isKindOfClass:[NSDictionary class]]) {
         JSON = [[NSString alloc] initWithData:[NSJSONSerialization dataWithJSONObject:JSON options:0 error:NULL] encoding:NSUTF8StringEncoding];
     }
@@ -391,7 +393,9 @@
     [self.audioPlayerView addSubview:toolBar];
     
     
-    audioPlayer = [[AVAudioPlayer alloc] initWithContentsOfURL:fileURL error:nil];
+    audioPlayer = [AVAudioPlayer alloc];
+    
+    audioPlayer = [audioPlayer initWithContentsOfURL:fileURL error:nil];
     
     audioPlayer.delegate = self;
     
@@ -523,7 +527,7 @@
     
     
     
-    AVAsset *asset = [AVURLAsset URLAssetWithURL:fileURL options:nil];
+   asset = [AVAsset assetWithURL:fileURL];
     AVPlayerItem *anItem = [AVPlayerItem playerItemWithAsset:asset];
     
     player = [AVPlayer playerWithPlayerItem:anItem];
@@ -644,8 +648,8 @@
 
 
 - (void) addBoundryTimeObserver {
-    CMTime current = controller.player.currentItem.currentTime;
-    CMTime duration = controller.player.currentItem.duration;
+    CMTime current = controller.player.currentTime;
+    CMTime duration = asset.duration;
     
     if (self.callbackId != nil) {
         NSString * cbid = [self.callbackId copy];
